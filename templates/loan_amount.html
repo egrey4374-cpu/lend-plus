@@ -9,8 +9,8 @@
     </div>
     <div class="progress-text">Step 3 of 3</div>
     
-    <h2>How much do you need?</h2>
-    <p>Choose an amount between KES {{ min_loan|default(1000)|int }} and KES {{ max_loan|default(50000)|int }}</p>
+    <h2>{{ country_data.flag }} How much do you need?</h2>
+    <p>Choose an amount between {{ currency_symbol }} {{ min_loan|int|format_number }} and {{ currency_symbol }} {{ max_loan|int|format_number }}</p>
     
     {% if error %}
     <div class="alert error">{{ error }}</div>
@@ -18,23 +18,31 @@
     
     <form method="POST" action="{{ url_for('loan_amount') }}">
         <div class="amount-options">
-            <button type="button" class="amount-btn" onclick="setAmount(5000)">KES 5,000</button>
-            <button type="button" class="amount-btn" onclick="setAmount(10000)">KES 10,000</button>
-            <button type="button" class="amount-btn" onclick="setAmount(20000)">KES 20,000</button>
-            <button type="button" class="amount-btn" onclick="setAmount(30000)">KES 30,000</button>
+            <button type="button" class="amount-btn" onclick="setAmount({{ min_loan }})">
+                {{ currency_symbol }} {{ min_loan|int|format_number }}
+            </button>
+            <button type="button" class="amount-btn" onclick="setAmount({{ (min_loan + max_loan) // 3 }})">
+                {{ currency_symbol }} {{ ((min_loan + max_loan) // 3)|int|format_number }}
+            </button>
+            <button type="button" class="amount-btn" onclick="setAmount({{ (max_loan + min_loan) // 2 }})">
+                {{ currency_symbol }} {{ ((max_loan + min_loan) // 2)|int|format_number }}
+            </button>
+            <button type="button" class="amount-btn" onclick="setAmount({{ max_loan }})">
+                {{ currency_symbol }} {{ max_loan|int|format_number }}
+            </button>
         </div>
         
         <div class="custom-amount">
             <label><strong>Or enter custom amount</strong></label>
             <input type="number" name="loan_amount" id="loan_amount" 
-                   placeholder="Enter amount" min="1000" max="50000" 
+                   placeholder="Enter amount" min="{{ min_loan }}" max="{{ max_loan }}" 
                    value="{{ request.form.loan_amount or '' }}" required>
         </div>
         
         <div class="loan-info">
             <div class="info-row">
-                <span>Interest rate:</span>
-                <span><span id="interest_display">5</span>%</span>
+                <span>Application Fee:</span>
+                <span><span id="fee_display">5</span>%</span>
             </div>
             <div class="info-row">
                 <span>Repayment period:</span>
@@ -48,31 +56,40 @@
 
 <script>
     const loanInput = document.getElementById('loan_amount');
-    const interestDisplay = document.getElementById('interest_display');
+    const feeDisplay = document.getElementById('fee_display');
     const monthsDisplay = document.getElementById('months_display');
+    const country = '{{ session.get("country", "kenya") }}';
+    
+    // Define fee rates by country and amount
+    function getLoanTerms(amount, country) {
+        let fee = 5, months = 1;
+        
+        if (country === 'kenya') {
+            if (amount > 30000) { fee = 12; months = 6; }
+            else if (amount > 10000) { fee = 8; months = 3; }
+        } else if (country === 'uganda') {
+            if (amount > 1000000) { fee = 12; months = 6; }
+            else if (amount > 500000) { fee = 8; months = 3; }
+        } else { // tanzania
+            if (amount > 300000) { fee = 12; months = 6; }
+            else if (amount > 100000) { fee = 8; months = 3; }
+        }
+        
+        return { fee, months };
+    }
     
     loanInput.addEventListener('input', function() {
         const amount = parseInt(this.value) || 0;
-        let rate = 5, months = 1;
+        const terms = getLoanTerms(amount, country);
         
-        if (amount > 30000) {
-            rate = 12;
-            months = 6;
-        } else if (amount > 10000) {
-            rate = 8;
-            months = 3;
-        }
-        
-        interestDisplay.textContent = rate;
-        monthsDisplay.textContent = months;
+        feeDisplay.textContent = terms.fee;
+        monthsDisplay.textContent = terms.months;
     });
     
     function setAmount(amount) {
         document.getElementById('loan_amount').value = amount;
-        // Trigger the input event
         const event = new Event('input');
         loanInput.dispatchEvent(event);
-        // Highlight selected button
         document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
         event.target.classList.add('active');
     }

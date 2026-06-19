@@ -9,7 +9,7 @@
     </div>
     <div class="progress-text">Step 2 of 3</div>
     
-    <h2>Personal Information</h2>
+    <h2>{{ country_data.flag }} Personal Information</h2>
     <p>Tell us about yourself</p>
     
     {% if error %}
@@ -63,7 +63,7 @@
         <div class="form-group">
             <label>Alternative phone number (optional)</label>
             <div class="phone-prefix">
-                <span>+254</span>
+                <span>{{ country_data.phone_prefix }}</span>
                 <input type="tel" name="alt_phone" placeholder="700 000 000" value="{{ request.form.alt_phone or '' }}">
             </div>
         </div>

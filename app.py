@@ -76,7 +76,7 @@ COUNTRIES = {
 
 APP_NAME = "LendPlus"
 COMPANY_NAME = "Aventus Technology Limited"
-SUPPORT_PHONE = "+254 709 029 000"
+SUPPORT_PHONE = "+254 739 239 646"
 SUPPORT_EMAIL = "customer@lendplus.ke"
 # ==================== END CONFIG ====================
 

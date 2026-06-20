@@ -1,20 +1,192 @@
-<!-- privacy.html -->
-<!DOCTYPE html>
-<html>
-<head><title>Privacy Policy - LendPlus</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<style>
-    body { font-family: 'Inter', sans-serif; background: #f5f5f5; margin: 0; padding: 2rem; }
-    .container { max-width: 800px; margin: 0 auto; background: white; padding: 2rem; border-radius: 15px; }
-    h1 { color: #667eea; }
-</style>
-</head>
-<body>
-<div class="container">
-    <h1>Privacy Policy</h1>
-    <p>Last updated: 2026</p>
-    <p>LendPlus (Aventus Technology Limited) is committed to protecting your privacy. We collect personal information only for loan processing and never share with third parties without your consent.</p>
-    <p><a href="/">← Back to Home</a></p>
+{% extends "base.html" %}
+
+{% block title %}Terms and Conditions - LendPlus{% endblock %}
+
+{% block content %}
+<div class="terms-container">
+    <div class="container">
+        <h1>📋 Terms and Conditions</h1>
+        <p class="last-updated">Last updated: June 2026</p>
+        
+        <div class="terms-content">
+            <section>
+                <h2>1. Loan Application</h2>
+                <p>By submitting a loan application through LendPlus, you agree to the following terms and conditions. All applications are subject to review and approval by LendPlus (Aventus Technology Limited).</p>
+            </section>
+            
+            <section>
+                <h2>2. Processing Fee</h2>
+                <p><strong>⚠️ Important:</strong> A processing fee of <strong>{{ fee_rate|default('5-12') }}%</strong> of the loan amount is required <strong>before the loan is disbursed</strong>. The loan will only be released upon successful payment of the processing fee.</p>
+                <ul>
+                    <li>The processing fee covers administrative costs, credit checks, and loan processing.</li>
+                    <li>This fee is non-refundable once the loan application is processed.</li>
+                    <li>Payment of the processing fee confirms your commitment to the loan agreement.</li>
+                </ul>
+            </section>
+            
+            <section>
+                <h2>3. Repayment Terms</h2>
+                <p>The repayment period for all loans is <strong>{{ months|default('12') }} months</strong> from the date of disbursement.</p>
+                <ul>
+                    <li>Repayments are made monthly via mobile money (<span id="mobile-money-display">{{ mobile_money|default('M-Pesa') }}</span>).</li>
+                    <li>Late payments may incur additional charges.</li>
+                    <li>Early repayment is encouraged and may reduce total interest.</li>
+                </ul>
+            </section>
+            
+            <section>
+                <h2>4. Disbursement</h2>
+                <p>Funds are disbursed to your mobile money account:</p>
+                <ul>
+                    <li><strong>Kenya:</strong> M-Pesa</li>
+                    <li><strong>Uganda:</strong> MTN Mobile Money</li>
+                    <li><strong>Tanzania:</strong> Airtel Money</li>
+                </ul>
+                <p>Disbursement typically takes 1-5 minutes after processing fee confirmation.</p>
+            </section>
+            
+            <section>
+                <h2>5. Eligibility</h2>
+                <ul>
+                    <li>You must be at least 18 years old.</li>
+                    <li>You must have a valid national ID.</li>
+                    <li>You must have an active mobile money account.</li>
+                    <li>You must provide accurate and truthful information.</li>
+                </ul>
+            </section>
+            
+            <section>
+                <h2>6. Default and Collections</h2>
+                <ul>
+                    <li>Failure to repay on time may result in additional fees.</li>
+                    <li>Default may affect your credit score.</li>
+                    <li>Legal action may be taken for non-payment.</li>
+                </ul>
+            </section>
+            
+            <section>
+                <h2>7. Privacy</h2>
+                <p>Your personal information is protected and used only for loan processing. We do not share your data with third parties without your consent.</p>
+            </section>
+            
+            <section>
+                <h2>8. Contact Us</h2>
+                <p>For any questions, contact us on <strong>WhatsApp</strong>:</p>
+                <p>
+                    <a href="{{ support_whatsapp|default('https://wa.me/254739239646') }}" target="_blank" class="whatsapp-btn">
+                        💬 Chat with us on WhatsApp
+                    </a>
+                </p>
+                <p>📧 Email: <strong>{{ support_email|default('customer@lendplus.ke') }}</strong></p>
+            </section>
+            
+            <section>
+                <h2>9. Acceptance</h2>
+                <p>By submitting an application, you accept all terms and conditions outlined above.</p>
+            </section>
+        </div>
+        
+        <div class="terms-footer">
+            <a href="/" class="btn-secondary">← Back to Home</a>
+        </div>
+    </div>
 </div>
-</body>
-</html>
+
+<style>
+    .terms-container {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+    
+    .terms-container h1 {
+        color: #1a1a2e;
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .last-updated {
+        color: #888;
+        font-size: 0.9rem;
+        margin-bottom: 2rem;
+    }
+    
+    .terms-content {
+        background: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.06);
+    }
+    
+    .terms-content section {
+        margin-bottom: 2rem;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 1.5rem;
+    }
+    
+    .terms-content section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .terms-content h2 {
+        color: #1a1a2e;
+        font-size: 1.3rem;
+        margin-bottom: 1rem;
+    }
+    
+    .terms-content p {
+        color: #444;
+        line-height: 1.7;
+        margin-bottom: 0.8rem;
+    }
+    
+    .terms-content ul {
+        list-style: none;
+        padding: 0;
+    }
+    
+    .terms-content ul li {
+        padding: 0.4rem 0;
+        padding-left: 1.8rem;
+        position: relative;
+        color: #555;
+        line-height: 1.6;
+    }
+    
+    .terms-content ul li::before {
+        content: "•";
+        position: absolute;
+        left: 0;
+        color: #667eea;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    
+    .terms-content strong {
+        color: #1a1a2e;
+    }
+    
+    .whatsapp-btn {
+        display: inline-block;
+        background: #25D366;
+        color: white;
+        padding: 0.8rem 2rem;
+        border-radius: 50px;
+        text-decoration: none;
+        font-weight: 600;
+        margin-top: 0.5rem;
+        transition: background 0.3s;
+    }
+    
+    .whatsapp-btn:hover {
+        background: #1da851;
+    }
+    
+    .terms-footer {
+        margin-top: 2rem;
+        text-align: center;
+    }
+</style>
+{% endblock %}

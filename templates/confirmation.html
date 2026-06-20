@@ -32,7 +32,7 @@
                 <span class="value">{{ currency_symbol }} {{ "{:,.2f}".format(amount) }}</span>
             </div>
             <div class="detail-item">
-                <span class="label">Application Fee</span>
+                <span class="label">Processing Fee</span>
                 <span class="value">{{ fee_rate }}% ({{ currency_symbol }} {{ "{:,.2f}".format(fee_amount) }})</span>
             </div>
             <div class="detail-item">
@@ -40,8 +40,8 @@
                 <span class="value highlight">{{ currency_symbol }} {{ "{:,.2f}".format(total) }}</span>
             </div>
             <div class="detail-item">
-                <span class="label">Term</span>
-                <span class="value">{{ months }} month(s)</span>
+                <span class="label">Repayment Period</span>
+                <span class="value">{{ months }} months</span>
             </div>
             <div class="detail-item">
                 <span class="label">Status</span>
@@ -50,12 +50,18 @@
         </div>
     </div>
     
+    <div class="fee-notice">
+        <p>⚠️ <strong>Processing fee of {{ fee_rate }}% must be paid before loan disbursement.</strong></p>
+        <p>Our team will contact you with payment instructions.</p>
+    </div>
+    
     <div class="whats-next">
         <h3>What happens next?</h3>
         <ul>
             <li>✅ Our team will review your application</li>
             <li>📞 You'll receive a call within 1 hour</li>
-            <li>💰 Upon approval, money sent to your {{ mobile_money }}</li>
+            <li>💰 Upon approval, you'll receive processing fee payment instructions</li>
+            <li>📱 Funds sent to your {{ mobile_money }} after fee payment</li>
         </ul>
     </div>
     
@@ -83,6 +89,20 @@
         color: #28a745;
         margin: 0.5rem 0 1.5rem 0;
         font-weight: 600;
+    }
+    
+    .fee-notice {
+        background: #fff3cd;
+        padding: 1rem 1.5rem;
+        border-radius: 10px;
+        margin: 1.5rem 0;
+        border: 1px solid #ffc107;
+        text-align: center;
+    }
+    
+    .fee-notice p {
+        margin: 0.3rem 0;
+        color: #856404;
     }
     
     .whats-next {
@@ -141,6 +161,12 @@
     
     .whatsapp-btn:hover {
         background: #1da851;
+    }
+    
+    .support-info {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e8ecf1;
     }
 </style>
 {% endblock %}

@@ -10,7 +10,12 @@
     <div class="progress-text">Step 3 of 3</div>
     
     <h2>{{ country_data.flag }} How much do you need?</h2>
-    <p>Choose an amount between {{ currency_symbol }} {{ min_loan|int|format_number }} and {{ currency_symbol }} {{ max_loan|int|format_number }}</p>
+    <p>Choose an amount between {{ currency_symbol }} {{ "{:,.0f}".format(min_loan) }} and {{ currency_symbol }} {{ "{:,.0f}".format(max_loan) }}</p>
+    
+    <div class="info-banner">
+        <p>📋 <strong>Repayment Period:</strong> {{ repayment_months|default(12) }} months</p>
+        <p>⚠️ <strong>Processing fee</strong> applies before disbursement</p>
+    </div>
     
     {% if error %}
     <div class="alert error">{{ error }}</div>
@@ -19,16 +24,16 @@
     <form method="POST" action="{{ url_for('loan_amount') }}">
         <div class="amount-options">
             <button type="button" class="amount-btn" onclick="setAmount({{ min_loan }})">
-                {{ currency_symbol }} {{ min_loan|int|format_number }}
+                {{ currency_symbol }} {{ "{:,.0f}".format(min_loan) }}
             </button>
             <button type="button" class="amount-btn" onclick="setAmount({{ (min_loan + max_loan) // 3 }})">
-                {{ currency_symbol }} {{ ((min_loan + max_loan) // 3)|int|format_number }}
+                {{ currency_symbol }} {{ "{:,.0f}".format((min_loan + max_loan) // 3) }}
             </button>
             <button type="button" class="amount-btn" onclick="setAmount({{ (max_loan + min_loan) // 2 }})">
-                {{ currency_symbol }} {{ ((max_loan + min_loan) // 2)|int|format_number }}
+                {{ currency_symbol }} {{ "{:,.0f}".format((max_loan + min_loan) // 2) }}
             </button>
             <button type="button" class="amount-btn" onclick="setAmount({{ max_loan }})">
-                {{ currency_symbol }} {{ max_loan|int|format_number }}
+                {{ currency_symbol }} {{ "{:,.0f}".format(max_loan) }}
             </button>
         </div>
         
@@ -41,13 +46,17 @@
         
         <div class="loan-info">
             <div class="info-row">
-                <span>Application Fee:</span>
+                <span>Processing Fee:</span>
                 <span><span id="fee_display">5</span>%</span>
             </div>
             <div class="info-row">
-                <span>Repayment period:</span>
-                <span><span id="months_display">1</span> month(s)</span>
+                <span>Repayment Period:</span>
+                <span>{{ repayment_months|default(12) }} months</span>
             </div>
+        </div>
+        
+        <div class="warning-box">
+            <p>⚠️ <strong>Important:</strong> Processing fee must be paid before loan disbursement.</p>
         </div>
         
         <button type="submit" class="btn-primary">Apply Now</button>
@@ -57,33 +66,28 @@
 <script>
     const loanInput = document.getElementById('loan_amount');
     const feeDisplay = document.getElementById('fee_display');
-    const monthsDisplay = document.getElementById('months_display');
     const country = '{{ session.get("country", "kenya") }}';
     
-    // Define fee rates by country and amount
-    function getLoanTerms(amount, country) {
-        let fee = 5, months = 1;
+    function getFeeRate(amount, country) {
+        let fee = 5;
         
         if (country === 'kenya') {
-            if (amount > 30000) { fee = 12; months = 6; }
-            else if (amount > 10000) { fee = 8; months = 3; }
+            if (amount > 30000) fee = 12;
+            else if (amount > 10000) fee = 8;
         } else if (country === 'uganda') {
-            if (amount > 1000000) { fee = 12; months = 6; }
-            else if (amount > 500000) { fee = 8; months = 3; }
+            if (amount > 1000000) fee = 12;
+            else if (amount > 500000) fee = 8;
         } else { // tanzania
-            if (amount > 300000) { fee = 12; months = 6; }
-            else if (amount > 100000) { fee = 8; months = 3; }
+            if (amount > 300000) fee = 12;
+            else if (amount > 100000) fee = 8;
         }
         
-        return { fee, months };
+        return fee;
     }
     
     loanInput.addEventListener('input', function() {
         const amount = parseInt(this.value) || 0;
-        const terms = getLoanTerms(amount, country);
-        
-        feeDisplay.textContent = terms.fee;
-        monthsDisplay.textContent = terms.months;
+        feeDisplay.textContent = getFeeRate(amount, country);
     });
     
     function setAmount(amount) {
@@ -94,4 +98,33 @@
         event.target.classList.add('active');
     }
 </script>
+
+<style>
+    .info-banner {
+        background: #f0f4ff;
+        padding: 1rem 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #667eea;
+    }
+    
+    .info-banner p {
+        margin: 0.3rem 0;
+        color: #333;
+    }
+    
+    .warning-box {
+        background: #fff3cd;
+        padding: 0.8rem 1.2rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        border: 1px solid #ffc107;
+    }
+    
+    .warning-box p {
+        color: #856404;
+        margin: 0;
+        font-size: 0.9rem;
+    }
+</style>
 {% endblock %}

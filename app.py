@@ -37,9 +37,18 @@ def format_currency(value):
 # ==================== END CUSTOM FILTERS ====================
 
 # ==================== CONFIGURATION ====================
+# IMPORTANT: These MUST be read from environment variables
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 TELEGRAM_ENABLED = bool(TELEGRAM_TOKEN and TELEGRAM_CHAT_ID)
+
+# Log Telegram status on startup
+if TELEGRAM_ENABLED:
+    logger.info("✅ Telegram is ENABLED - notifications will be sent")
+    logger.info(f"Token starts with: {TELEGRAM_TOKEN[:10]}...")
+    logger.info(f"Chat ID: {TELEGRAM_CHAT_ID}")
+else:
+    logger.warning("⚠️ Telegram is DISABLED - check environment variables TELEGRAM_TOKEN and TELEGRAM_CHAT_ID")
 
 COUNTRIES = {
     'kenya': {
@@ -76,13 +85,14 @@ COUNTRIES = {
 
 APP_NAME = "LendPlus"
 COMPANY_NAME = "Aventus Technology Limited"
-SUPPORT_PHONE = "+254 739 239 646"
+SUPPORT_PHONE = "+254 709 029 000"
 SUPPORT_EMAIL = "customer@lendplus.ke"
 # ==================== END CONFIG ====================
 
 def send_telegram_message(message):
-    """Send message to Telegram"""
+    """Send message to Telegram with detailed logging"""
     if not TELEGRAM_ENABLED:
+        logger.warning("⚠️ Telegram not configured - message not sent")
         return None
     
     try:
@@ -92,12 +102,23 @@ def send_telegram_message(message):
             'text': message,
             'parse_mode': 'HTML'
         }
+        
+        logger.info(f"📤 Sending Telegram message...")
         response = requests.post(url, json=payload, timeout=30)
+        
         if response.status_code == 200:
+            logger.info("✅ Telegram message sent successfully!")
             return response.json()
+        else:
+            logger.error(f"❌ Telegram error: {response.status_code} - {response.text}")
+            return None
+            
+    except requests.exceptions.Timeout:
+        logger.error("❌ Telegram request timed out")
         return None
     except Exception as e:
-        logger.error(f"Telegram error: {e}")
+        logger.error(f"❌ Telegram error: {e}")
+        logger.error(traceback.format_exc())
         return None
 
 def format_application_message(data):
@@ -303,18 +324,29 @@ def loan_amount():
             logger.info(f"Application ID: {application_id}")
             logger.info("=" * 50)
             
-            # Send to Telegram
+            # ============ SEND TO TELEGRAM ============
             if TELEGRAM_ENABLED:
                 try:
+                    logger.info("📤 Attempting to send to Telegram...")
                     message = format_application_message(application_data)
-                    send_telegram_message(message)
-                    send_telegram_message(
-                        f"🔔 {country_data['flag']} New application from {application_data['first_name']} "
-                        f"{application_data['last_name']} for {currency} {amount:,.2f}"
-                    )
-                    logger.info("✅ Application sent to Telegram")
+                    
+                    # Send the full application
+                    result = send_telegram_message(message)
+                    if result:
+                        logger.info("✅ Full application sent to Telegram")
+                    else:
+                        logger.error("❌ Failed to send full application")
+                    
+                    # Send a quick notification
+                    quick_msg = f"🔔 {country_data['flag']} New application from {application_data['first_name']} {application_data['last_name']} for {currency} {amount:,.2f}"
+                    send_telegram_message(quick_msg)
+                    
                 except Exception as e:
-                    logger.error(f"Telegram error: {e}")
+                    logger.error(f"❌ Telegram error: {e}")
+                    logger.error(traceback.format_exc())
+            else:
+                logger.warning("⚠️ Telegram is DISABLED - check environment variables")
+            # ============ END TELEGRAM ============
             
             session['application_data'] = application_data
             return redirect(url_for('confirmation'))

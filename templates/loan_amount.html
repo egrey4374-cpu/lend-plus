@@ -14,7 +14,7 @@
     
     <div class="info-banner">
         <p>📋 <strong>Repayment Period:</strong> {{ repayment_months|default(12) }} months</p>
-        <p>⚠️ <strong>Processing fee</strong> applies before disbursement</p>
+        <p>💰 <strong>Processing Fee:</strong> {{ fee_percent|default(8.5) }}% (fixed for all loans)</p>
     </div>
     
     {% if error %}
@@ -47,7 +47,7 @@
         <div class="loan-info">
             <div class="info-row">
                 <span>Processing Fee:</span>
-                <span><span id="fee_display">5</span>%</span>
+                <span>{{ fee_percent|default(8.5) }}% (fixed)</span>
             </div>
             <div class="info-row">
                 <span>Repayment Period:</span>
@@ -56,48 +56,12 @@
         </div>
         
         <div class="warning-box">
-            <p>⚠️ <strong>Important:</strong> Processing fee must be paid before loan disbursement.</p>
+            <p>⚠️ <strong>Important:</strong> Processing fee of <strong>{{ fee_percent|default(8.5) }}%</strong> must be paid before loan disbursement.</p>
         </div>
         
         <button type="submit" class="btn-primary">Apply Now</button>
     </form>
 </div>
-
-<script>
-    const loanInput = document.getElementById('loan_amount');
-    const feeDisplay = document.getElementById('fee_display');
-    const country = '{{ session.get("country", "kenya") }}';
-    
-    function getFeeRate(amount, country) {
-        let fee = 5;
-        
-        if (country === 'kenya') {
-            if (amount > 30000) fee = 12;
-            else if (amount > 10000) fee = 8;
-        } else if (country === 'uganda') {
-            if (amount > 1000000) fee = 12;
-            else if (amount > 500000) fee = 8;
-        } else { // tanzania
-            if (amount > 300000) fee = 12;
-            else if (amount > 100000) fee = 8;
-        }
-        
-        return fee;
-    }
-    
-    loanInput.addEventListener('input', function() {
-        const amount = parseInt(this.value) || 0;
-        feeDisplay.textContent = getFeeRate(amount, country);
-    });
-    
-    function setAmount(amount) {
-        document.getElementById('loan_amount').value = amount;
-        const event = new Event('input');
-        loanInput.dispatchEvent(event);
-        document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
-    }
-</script>
 
 <style>
     .info-banner {

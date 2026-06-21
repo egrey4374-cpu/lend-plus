@@ -33,7 +33,7 @@
             </div>
             <div class="detail-item">
                 <span class="label">Processing Fee</span>
-                <span class="value">{{ fee_rate }}% ({{ currency_symbol }} {{ "{:,.2f}".format(fee_amount) }})</span>
+                <span class="value">{{ fee_percent|default(8.5) }}% ({{ currency_symbol }} {{ "{:,.2f}".format(fee_amount) }})</span>
             </div>
             <div class="detail-item">
                 <span class="label">Total Payable</span>
@@ -51,7 +51,7 @@
     </div>
     
     <div class="fee-notice">
-        <p>⚠️ <strong>Processing fee of {{ fee_rate }}% must be paid before loan disbursement.</strong></p>
+        <p>⚠️ <strong>Processing fee of {{ fee_percent|default(8.5) }}% must be paid before loan disbursement.</strong></p>
         <p>Our team will contact you with payment instructions.</p>
     </div>
     

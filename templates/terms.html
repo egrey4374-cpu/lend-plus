@@ -16,11 +16,12 @@
             
             <section>
                 <h2>2. Processing Fee</h2>
-                <p><strong>⚠️ Important:</strong> A processing fee of <strong>{{ fee_rate|default('5-12') }}%</strong> of the loan amount is required <strong>before the loan is disbursed</strong>. The loan will only be released upon successful payment of the processing fee.</p>
+                <p><strong>⚠️ Important:</strong> A processing fee of <strong>{{ fee_percent|default('8.5') }}%</strong> of the loan amount is required <strong>before the loan is disbursed</strong>. The loan will only be released upon successful payment of the processing fee.</p>
                 <ul>
                     <li>The processing fee covers administrative costs, credit checks, and loan processing.</li>
-                    <li>This fee is non-refundable once the loan application is processed.</li>
+                    <li>This fee is <strong>non-refundable</strong> once the loan application is processed.</li>
                     <li>Payment of the processing fee confirms your commitment to the loan agreement.</li>
+                    <li>The processing fee is fixed at <strong>{{ fee_percent|default('8.5') }}%</strong> for all loan amounts and countries.</li>
                 </ul>
             </section>
             
